@@ -1,0 +1,8 @@
+name = "SfTree"
+uuid = "0cbf2a2d-f7ef-400e-8d19-df1aa543c244"
+authors = ["Manshilin Oleg <manshilin.o@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
