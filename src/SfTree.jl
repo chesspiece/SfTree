@@ -18,12 +18,14 @@ Node(prnt::Int=0, strt::Int=0, endng::Int=0, id=1, is_leaf=false) = Node(Dict{Ch
 Node(dct::Dict{Char,Int}, prnt::Int = 0, strt::Int = 0, endng::Int = 0, id=1, is_leaf=false) = Node(dct, prnt, strt, endng, -1, false, id, is_leaf)
 
 """
+    compare_structs(a::T, b::T) where {T}
+
 Check if structure a and b of the ame type have the same values
 Structs should not contain mutable strcts as variables
 """
 function compare_structs(a::T, b::T) where {T}
     f = fieldnames(T)
-    getfield.(Ref(a),f) == getfield.(Ref(b),f)
+    getfield.(Ref(a), f) == getfield.(Ref(b), f)
 end
 
 mutable struct SuffixTree{T<:AbstractString}
@@ -47,6 +49,12 @@ end
 SuffixTree(str::AbstractString) = SuffixTree(Vector{Node}([Node()]), 1, str, '$', 1, 2, 1, 1)
 SuffixTree(str::AbstractString, term::Char) = SuffixTree(Vector{Node}(), 1, str, term, 1, 2, 1, 1)
 
+
+"""
+    build_sf_tree(str::AbstractString)::SuffixTree
+
+TBW
+"""
 function build_sf_tree(str::AbstractString)::SuffixTree
     tree = SuffixTree(str)
     first_extension(tree)
@@ -57,6 +65,12 @@ function build_sf_tree(str::AbstractString)::SuffixTree
     return tree
 end
 
+
+"""
+    first_extension(tree::SuffixTree)
+
+TBW
+"""
 function first_extension(tree::SuffixTree)
     new_node = Node()
     #new_node.sf_exists = false
@@ -75,15 +89,18 @@ function first_extension(tree::SuffixTree)
     return
 end
 
+
 """
-    Ukonnen's suffix tree construction extenson phases for phase i+1
+    extension_phases(tree::SuffixTree, phase::Int)
+    Ukonnen's suffix tree construction extenson phases for phase phase(i+1 in Gusfield book)
+
     Inputs:
     -------
         tree - implicit suffix tree i.
         phase - previous phase number
     Outputs:
     --------
-        Implicit suffix tree i+1
+        Implicit suffix tree phase(i+1 in Gusfield book)
 """
 function extension_phases(tree::SuffixTree, phase::Int)
     curr_node = tree.nodes[tree.curr_node]
@@ -132,6 +149,7 @@ function extension_phases(tree::SuffixTree, phase::Int)
             else
                 # rule 3
                 if tree.text[str_id_start + str_curr_len - 1] == tree.text[phase]
+                    tree.current_phase_start = j - 1
                     return tree
                 end
                 # erule 3 end
@@ -151,6 +169,7 @@ function extension_phases(tree::SuffixTree, phase::Int)
 
             # rule 3
             if tree.text[phase] in keys(curr_node.childrens)
+                tree.current_phase_start = j - 1
                 return tree
             end
 
@@ -194,6 +213,7 @@ function extension_phases(tree::SuffixTree, phase::Int)
             tree.nodes[sf_node].sf_link = new_node.id
         end
     end
+    tree.current_phase_start = phase - 1
     return 
 end
 
