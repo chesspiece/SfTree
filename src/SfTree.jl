@@ -15,7 +15,7 @@ mutable struct Node
     #smallest_leaf_num::Int #index of smallest leaf node in subtree of this node
 end
 Node(prnt::Int=0, strt::Int=0, endng::Int=0, id=1, is_leaf=false) = Node(Dict{Char,Int}(), prnt, strt, endng, -1, false, id, is_leaf)
-Node(dct::Dict{Char,Int}, prnt::Int = 0, strt::Int = 0, endng::Int = 0, id=1, is_leaf=false) = Node(dct, prnt, strt, endng, -1, false, id, is_leaf)
+Node(dct::Dict{Char,Int}, prnt::Int=0, strt::Int=0, endng::Int=0, id=1, is_leaf=false) = Node(dct, prnt, strt, endng, -1, false, id, is_leaf)
 
 """
     compare_structs(a::T, b::T) where {T}
@@ -112,24 +112,22 @@ function extension_phases(tree::SuffixTree, phase::Int)
         # Check if suffix link exists.
         # If not go up a node because we a guranteed to either have node with suffix link
         # or root node at the current node or at the paret of root node.
+        steped_back_count = 0
         if !curr_node.sf_exists && (curr_node.id != tree.root)
             curr_node = tree.nodes[curr_node.parent]
+            steped_back_count = curr_node.str_id_ending - curr_node.str_id_start + 1
         end
         if curr_node.id != tree.root
             curr_node = tree.nodes[curr_node.sf_link]
         end
 
-        if curr_node.str_id_ending == -1
-            str_id_ending = tree.leaf_idx
-        else
-            str_id_ending = curr_node.str_id_ending
-        end
         if curr_node.id == tree.root
             str_curr_pos = j
+            str_curr_len = phase + 1 - j
         else
             str_curr_pos = curr_node.str_id_ending + 1
+            str_curr_len = steped_back_count + 1
         end
-        str_curr_len = phase + 1 - str_curr_pos
 
         flag = 0 # "finish_on_node"
         while tree.text[str_curr_pos] in keys(curr_node.childrens) && str_curr_len > 1
@@ -144,17 +142,17 @@ function extension_phases(tree::SuffixTree, phase::Int)
 
             walked_len = str_id_ending - str_id_start + 1
             if walked_len < str_curr_len
-                str_curr_pos += walked_len 
+                str_curr_pos += walked_len
                 str_curr_len -= walked_len
             else
                 # rule 3
-                if tree.text[str_id_start + str_curr_len - 1] == tree.text[phase]
+                if tree.text[str_id_start+str_curr_len-1] == tree.text[phase]
                     tree.current_phase_start = j - 1
                     return tree
                 end
                 # erule 3 end
                 walked_len = str_curr_len - 1
-                str_curr_pos += walked_len 
+                str_curr_pos += walked_len
                 str_curr_len -= walked_len
                 flag = 1 # "finish_inside_edge"
                 break
@@ -214,7 +212,7 @@ function extension_phases(tree::SuffixTree, phase::Int)
         end
     end
     tree.current_phase_start = phase - 1
-    return 
+    return
 end
 
 end # module SfTree
