@@ -107,18 +107,19 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
     #curr_node = tree.nodes[1]
     sf_node = tree.root
     need_sf = false
-    str_break_pos = -1
-    walked_len = -1
+    str_break_pos = 1
+    walked_len = 1
     first_iteration = true
     for j in tree.current_phase_start:phase
         if !first_iteration
+            #curr_node = tree.nodes[tree.root]
             # Check if suffix link exists.
             # If not go up a node because we a guranteed to either have node with suffix link
             # or root node at the current node or at the paret of root node.
             steped_back_count = 0
             if !curr_node.sf_exists && (curr_node.id != tree.root)
-                curr_node = tree.nodes[curr_node.parent]
                 steped_back_count = curr_node.str_id_ending - curr_node.str_id_start + 1
+                curr_node = tree.nodes[curr_node.parent]
             end
             if curr_node.id != tree.root
                 curr_node = tree.nodes[curr_node.sf_link]
@@ -128,7 +129,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 str_curr_pos = j
                 str_curr_len = phase + 1 - j
             else
-                str_curr_pos = j - steped_back_count + 1#curr_node.str_id_ending + 1
+                str_curr_pos = phase - steped_back_count
                 str_curr_len = steped_back_count + 1
             end
         end
@@ -158,6 +159,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 end
                 # rule 3 end
                 walked_len = str_curr_len - 1
+                #walked_len
                 str_break_pos = str_curr_pos + walked_len
                 str_curr_len -= walked_len
                 flag = 1 # "finish_inside_edge"
@@ -169,6 +171,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             # rule 1
             if isempty(curr_node.childrens) && curr_node.id != tree.root #rule 1. At most 1 operation
                 tree.curr_node = curr_node.id
+                curr_node = tree.nodes[tree.root]
                 continue
             end
 
@@ -202,9 +205,10 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
 
             # starting node for suffix link traversal. If syffix link don't exists - go up a node
             curr_node = tree.nodes[curr_node.id]
+            #curr_node = tree.nodes[tree.root]
 
-            #tree.curr_node = new_node.id
-            need_sf = false
+            tree.curr_node = new_node.id
+            #need_sf = false
         else
             # rule 2 inside of edge
             # new non-leaf node
@@ -250,14 +254,44 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             need_sf = true 
             sf_node = new_node.id
 
-            # starting node for suffix link traversal. If syffix link don't exists - go up a node
+            # starting node for suffix link traversal. If suffix link don't exists - go up a node
             curr_node = tree.nodes[new_node.id]
+            #curr_node = tree.nodes[tree.root]
 
             tree.curr_node = new_node_leaf.id
         end
     end
     tree.current_phase_start = phase
-    return str_curr_pos, str_curr_len + 1
+    return str_curr_pos, str_curr_len
+end
+
+
+function get_edges_names(tree::SuffixTree, save_data::Vector{AbstractString})
+    curr_node = tree.nodes[tree.root]
+    for i in values(curr_node.childrens)
+        curr_node = tree.nodes[i]
+        #println("start $(curr_node.str_id_start) end: $(curr_node.str_id_ending)")
+        if curr_node.str_id_ending == -1
+            curr_node.str_id_ending = tree.leaf_idx
+        end
+        push!(save_data, tree.text[curr_node.str_id_start:curr_node.str_id_ending])
+        __get_edges_names__(tree, save_data, curr_node)
+    end
+    return
+end
+
+
+function __get_edges_names__(tree::SuffixTree, save_data::Vector{AbstractString}, curr_node)
+    #curr_node = tree.nodes[tree.root]
+    for i in values(curr_node.childrens)
+        curr_node = tree.nodes[i]
+        if curr_node.str_id_ending == -1
+            curr_node.str_id_ending = tree.leaf_idx
+        end
+        push!(save_data, tree.text[curr_node.str_id_start:curr_node.str_id_ending])
+        __get_edges_names__(tree, save_data, curr_node)
+    end
+    return
 end
 
 end # module SfTree
