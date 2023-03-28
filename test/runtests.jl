@@ -19,6 +19,7 @@ using Test
     end
 end
 
+
 @testset "Build large tree without exception" begin
     data = "ATCTACCAGCAGTGAACATGGGAGGACCAGT" *
            "AAGGAAGGCTTACCCTCGATGTGTTACAGAC" *
@@ -61,4 +62,18 @@ end
     catch
         false
     end
+end
+
+
+@testset "Test that build tree have correct edges" begin
+    text = "ATAAATG\$"
+    tree = build_sf_tree(text)
+    tree_edges = Vector{String}()
+    get_edges_names(tree, tree_edges)
+    test_labels = ["AAATG\$", "G\$", "T", "ATG\$", "TG\$", "A", "A", "AAATG\$", "G\$", "T", "G\$", "\$"]
+
+    for label in test_labels
+        @test label in tree_edges
+    end
+    @test length(test_labels) == length(tree_edges)
 end

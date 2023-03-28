@@ -1,8 +1,4 @@
 module SfTree
-export greet
-
-greet() = return "Hello World!"
-
 
 mutable struct Node
     childrens::Dict{Char,Int}
@@ -108,10 +104,13 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
     walked_len = 1
     first_iteration = true
     for j in tree.current_phase_start:phase
+        # On the first iteration we start at the correct tree using correct node and edge from previous extension phase
         if !first_iteration
             # Check if suffix link exists.
-            # If not go up a node because we a guranteed to either have node with suffix link
-            # or root node at the current node or at the paret of root node.
+            # If not go up a node. We are guranteed to have either of the following:
+            #   1) suffix link at the current note
+            #   2) suffix link ath the paretnt of the current node
+            #   3) root node at the current node or a parent of the current node
             steped_back_count = 0
             if !curr_node.sf_exists && (curr_node.id != tree.root)
                 steped_back_count = curr_node.str_id_ending - curr_node.str_id_start + 1
@@ -131,7 +130,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
         end
         first_iteration = false
 
-        flag = 0 # "finish_on_node"
+        flag = 0 # "finish search of the needed position on node"
         while tree.text[str_curr_pos] in keys(curr_node.childrens) && str_curr_len > 1
             curr_node = tree.nodes[curr_node.childrens[tree.text[str_curr_pos]]]
 
@@ -147,7 +146,8 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 str_curr_pos += walked_len
                 str_curr_len -= walked_len
             else
-                # rule 3
+                # Rule 3 (inside the edge)
+                # Stop current extension if reached
                 if tree.text[str_id_start+str_curr_len-1] == tree.text[phase]
                     tree.curr_node = curr_node.parent
                     tree.current_phase_start = j
@@ -157,13 +157,13 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 walked_len = str_curr_len - 1
                 str_break_pos = str_curr_pos + walked_len
                 str_curr_len -= walked_len
-                flag = 1 # "finish_inside_edge"
+                flag = 1 # "finish search of the needed position inside the edge"
                 break
             end
         end
 
-        if flag == 0 # finish on node
-            # rule 1
+        if flag == 0 # "finish search of the needed position on node"
+            # Rule 1 (on the node)
             if isempty(curr_node.childrens) && curr_node.id != tree.root #rule 1. At most 1 operation
                 tree.curr_node = curr_node.id
                 continue
@@ -174,16 +174,16 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 tree.nodes[sf_node].sf_exists = true
                 need_sf = false
             end
-            # rule 3
-            #  break current extension if reached
+            # Rule 3 (on the node)
+            # Stop current extension if reached
             if tree.text[phase] in keys(curr_node.childrens)
                 tree.curr_node = curr_node.id
                 tree.current_phase_start = j
                 return str_curr_pos, str_curr_len + 1
             end
 
-            #rule 2
-            #create new leaf node
+            # Rule 2 (on the node)
+            # Create new leaf node
             new_node = Node()
             new_node.str_id_start = str_curr_pos
             new_node.str_id_ending = -1
@@ -193,16 +193,15 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             new_node.childrens = Dict{Char,Int}()
             tree.nodes_count += 1
 
-            # add node to the tree
+            # Add node to the tree
             push!(tree.nodes, new_node)
             tree.nodes[curr_node.id].childrens[tree.text[str_curr_pos]] = new_node.id
 
-            # starting node for suffix link traversal. If syffix link don't exists - go up a node
-            #curr_node = tree.nodes[curr_node.id]
+            # Starting node for suffix link traversal. If syffix link don't exists - go up a node
             tree.curr_node = new_node.id
         else
-            # rule 2 inside of edge
-            # new non-leaf node
+            # Rule 2 (inside the edge)
+            # New non-leaf node
             new_node = Node()
             new_node.str_id_start = curr_node.str_id_start
             new_node.str_id_ending = curr_node.str_id_start + walked_len - 1
@@ -212,7 +211,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             new_node.childrens = Dict{Char,Int}()
             tree.nodes_count += 1
 
-            # new leaf node
+            # New leaf node
             new_node_leaf = Node()
             new_node_leaf.str_id_start = str_break_pos
             new_node_leaf.str_id_ending = -1
@@ -222,13 +221,13 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             new_node_leaf.childrens = Dict{Char,Int}()
             tree.nodes_count += 1
 
-            # edge text modification for current node
+            # Edge text modification for current node
             curr_node.str_id_start = new_node.str_id_ending + 1
 
             push!(tree.nodes, new_node)
             push!(tree.nodes, new_node_leaf)
 
-            # slice edge
+            # Slice edge
             tree.nodes[curr_node.parent].childrens[tree.text[str_curr_pos]] = new_node.id
             tree.nodes[new_node.id].childrens[tree.text[curr_node.str_id_start]] = curr_node.id
             tree.nodes[new_node.id].childrens[tree.text[new_node_leaf.str_id_start]] = new_node_leaf.id
@@ -239,13 +238,13 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                 tree.nodes[sf_node].sf_exists = true
             end
 
-            # suffix link computaton
+            # Creation of the suffix link is needed. Suffix link will be created at the next iteration of current loop 
             need_sf = true
             sf_node = new_node.id
 
-            # starting node for suffix link traversal. If suffix link don't exists - go up a node
+            # Starting node for suffix link traversal. If suffix link don't exists - go up a node
             curr_node = tree.nodes[new_node.id]
-            tree.curr_node = new_node_leaf.id
+            #tree.curr_node = new_node_leaf.id
         end
     end
     tree.current_phase_start = phase
