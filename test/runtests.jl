@@ -1,4 +1,4 @@
-import SfTree: SuffixTree, build_sf_tree, Node, compare_structs, get_edges_names
+import SfTree: Node, build_sf_tree, compare_structs, get_edges_names
 using Test
 
 @testset "Test nodes" begin

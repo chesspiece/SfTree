@@ -3,8 +3,8 @@ module SfTree
 mutable struct Node
     childrens::Dict{Char,Int}
     parent::Int
-    str_id_start::Int
-    str_id_ending::Int
+    str_start_idx::Int
+    str_ending_idx::Int
     sf_link::Int
     sf_exists::Bool
     id::Int
@@ -28,21 +28,15 @@ end
 
 
 mutable struct SuffixTree{T<:AbstractString}
-    #=
-    sf_ - means that this variable is needed for suffix links construction
-    0 - is the index of root
-    =#
     nodes::Vector{Node}
     nodes_count::Int
     text::T
-    term::Char
     root::Int
     curr_node::Int
     current_phase_start::Int
     leaf_idx::Int
 end
-SuffixTree(str::AbstractString) = SuffixTree(Vector{Node}([Node()]), 1, str, '$', 1, 2, 1, 1)
-SuffixTree(str::AbstractString, term::Char) = SuffixTree(Vector{Node}(), 1, str, term, 1, 2, 1, 1)
+SuffixTree(str::AbstractString) = SuffixTree(Vector{Node}([Node()]), 1, str, 1, 2, 1, 1)
 
 
 """
@@ -68,8 +62,8 @@ TBW
 """
 function first_extension(tree::SuffixTree)
     new_node = Node()
-    new_node.str_id_start = 1
-    new_node.str_id_ending = -1
+    new_node.str_start_idx = 1
+    new_node.str_ending_idx = -1
     new_node.id = tree.nodes_count + 1
     new_node.parent = 1
     new_node.is_leaf = true
@@ -91,7 +85,7 @@ end
     Inputs:
     -------
         tree - implicit suffix tree i.
-        phase - previous phase number
+        phase - new phase number
     Outputs:
     --------
         Implicit suffix tree phase(i+1 in Gusfield book)
@@ -113,7 +107,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             #   3) root node at the current node or a parent of the current node
             steped_back_count = 0
             if !curr_node.sf_exists && (curr_node.id != tree.root)
-                steped_back_count = curr_node.str_id_ending - curr_node.str_id_start + 1
+                steped_back_count = curr_node.str_ending_idx - curr_node.str_start_idx + 1
                 curr_node = tree.nodes[curr_node.parent]
             end
             if curr_node.id != tree.root
@@ -134,11 +128,11 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
         while tree.text[str_curr_pos] in keys(curr_node.childrens) && str_curr_len > 1
             curr_node = tree.nodes[curr_node.childrens[tree.text[str_curr_pos]]]
 
-            str_id_start = curr_node.str_id_start
-            if curr_node.str_id_ending == -1
+            str_id_start = curr_node.str_start_idx
+            if curr_node.str_ending_idx == -1
                 str_id_ending = tree.leaf_idx
             else
-                str_id_ending = curr_node.str_id_ending
+                str_id_ending = curr_node.str_ending_idx
             end
 
             walked_len = str_id_ending - str_id_start + 1
@@ -152,8 +146,7 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
                     tree.curr_node = curr_node.parent
                     tree.current_phase_start = j
                     return str_curr_pos, str_curr_len + 1
-                end
-                # rule 3 end
+                end # rule 3 end
                 walked_len = str_curr_len - 1
                 str_break_pos = str_curr_pos + walked_len
                 str_curr_len -= walked_len
@@ -185,8 +178,8 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             # Rule 2 (on the node)
             # Create new leaf node
             new_node = Node()
-            new_node.str_id_start = str_curr_pos
-            new_node.str_id_ending = -1
+            new_node.str_start_idx = str_curr_pos
+            new_node.str_ending_idx = -1
             new_node.id = tree.nodes_count + 1
             new_node.parent = curr_node.id
             new_node.is_leaf = true
@@ -203,8 +196,8 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             # Rule 2 (inside the edge)
             # New non-leaf node
             new_node = Node()
-            new_node.str_id_start = curr_node.str_id_start
-            new_node.str_id_ending = curr_node.str_id_start + walked_len - 1
+            new_node.str_start_idx = curr_node.str_start_idx
+            new_node.str_ending_idx = curr_node.str_start_idx + walked_len - 1
             new_node.id = tree.nodes_count + 1
             new_node.parent = curr_node.parent
             new_node.is_leaf = false
@@ -213,8 +206,8 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
 
             # New leaf node
             new_node_leaf = Node()
-            new_node_leaf.str_id_start = str_break_pos
-            new_node_leaf.str_id_ending = -1
+            new_node_leaf.str_start_idx = str_break_pos
+            new_node_leaf.str_ending_idx = -1
             new_node_leaf.id = tree.nodes_count + 1
             new_node_leaf.parent = new_node.id
             new_node_leaf.is_leaf = true
@@ -222,15 +215,15 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
             tree.nodes_count += 1
 
             # Edge text modification for current node
-            curr_node.str_id_start = new_node.str_id_ending + 1
+            curr_node.str_start_idx = new_node.str_ending_idx + 1
 
             push!(tree.nodes, new_node)
             push!(tree.nodes, new_node_leaf)
 
             # Slice edge
             tree.nodes[curr_node.parent].childrens[tree.text[str_curr_pos]] = new_node.id
-            tree.nodes[new_node.id].childrens[tree.text[curr_node.str_id_start]] = curr_node.id
-            tree.nodes[new_node.id].childrens[tree.text[new_node_leaf.str_id_start]] = new_node_leaf.id
+            tree.nodes[new_node.id].childrens[tree.text[curr_node.str_start_idx]] = curr_node.id
+            tree.nodes[new_node.id].childrens[tree.text[new_node_leaf.str_start_idx]] = new_node_leaf.id
             curr_node.parent = new_node.id
 
             if need_sf
@@ -244,11 +237,10 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
 
             # Starting node for suffix link traversal. If suffix link don't exists - go up a node
             curr_node = tree.nodes[new_node.id]
-            #tree.curr_node = new_node_leaf.id
         end
     end
     tree.current_phase_start = phase
-    return str_curr_pos, str_curr_len
+    return str_curr_pos, str_curr_len + 1 # Not important because in this case we start on the leaf noe in next extension
 end
 
 
@@ -256,10 +248,10 @@ function get_edges_names(tree::SuffixTree, save_data::Vector{<:AbstractString})
     curr_node = tree.nodes[tree.root]
     for i in values(curr_node.childrens)
         curr_node = tree.nodes[i]
-        if curr_node.str_id_ending == -1
-            curr_node.str_id_ending = tree.leaf_idx
+        if curr_node.str_ending_idx == -1
+            curr_node.str_ending_idx = tree.leaf_idx
         end
-        push!(save_data, tree.text[curr_node.str_id_start:curr_node.str_id_ending])
+        push!(save_data, tree.text[curr_node.str_start_idx:curr_node.str_ending_idx])
         __get_edges_names__(tree, save_data, curr_node)
     end
     return
@@ -269,11 +261,43 @@ end
 function __get_edges_names__(tree::SuffixTree, save_data::Vector{<:AbstractString}, curr_node)
     for i in values(curr_node.childrens)
         curr_node = tree.nodes[i]
-        if curr_node.str_id_ending == -1
-            curr_node.str_id_ending = tree.leaf_idx
+        if curr_node.str_ending_idx == -1
+            curr_node.str_ending_idx = tree.leaf_idx
         end
-        push!(save_data, tree.text[curr_node.str_id_start:curr_node.str_id_ending])
+        push!(save_data, tree.text[curr_node.str_start_idx:curr_node.str_ending_idx])
         __get_edges_names__(tree, save_data, curr_node)
+    end
+    return
+end
+
+
+function longest_repeated_substring(tree::SuffixTree)
+    curr_node::Node = tree.nodes[tree.root]
+    sbsr_lngth = zeros(Int, length(tree.nodes))
+    for child_id in values(curr_node.childrens)
+        child_node::Node = tree.nodes[child_id]
+        if child_node.is_leaf
+            sbsr_lngth[child_id] = -1
+        else
+            sbsr_lngth[child_id] = sbsr_lngth[curr_node.id] + (child_node.str_ending_idx - child_node.str_start_idx + 1)
+        end
+        __longest_repeated_substring__(tree, child_node, sbsr_lngth)
+    end
+    longest_repeated_substring_node_id = argmax(sbsr_lngth)
+    longest_node = tree.nodes[longest_repeated_substring_node_id]
+    return tree.text[longest_node.str_ending_idx - sbsr_lngth[longest_repeated_substring_node_id] + 1:longest_node.str_ending_idx]
+end
+
+
+function __longest_repeated_substring__(tree::SuffixTree, curr_node::Node, sbsr_lngth::Vector{Int})
+    for child_id in values(curr_node.childrens)
+        child_node::Node = tree.nodes[child_id]
+        if child_node.is_leaf
+            sbsr_lngth[child_id] = -1
+        else
+            sbsr_lngth[child_id] = sbsr_lngth[curr_node.id] + (child_node.str_ending_idx - child_node.str_start_idx + 1)
+        end
+        __longest_repeated_substring__(tree, child_node, sbsr_lngth)
     end
     return
 end
