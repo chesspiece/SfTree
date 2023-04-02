@@ -240,20 +240,18 @@ function extension_phases(tree::SuffixTree, phase::Int, str_curr_pos::Int, str_c
         end
     end
     tree.current_phase_start = phase
-    return str_curr_pos, str_curr_len + 1 # Not important because in this case we start on the leaf noe in next extension
+    return str_curr_pos, str_curr_len + 1 # Not important because in this case we start on the leaf node in next extension
 end
 
 
+"""
+Get strings which attached to each edge of suffix tree by recursive DFS (depth first search)
+__get_edges_names__ is a helper function for get_edges_names needed for a recursion
+get_edges_names set initial parameters for a recursion
+"""
 function get_edges_names(tree::SuffixTree, save_data::Vector{<:AbstractString})
     curr_node = tree.nodes[tree.root]
-    for i in values(curr_node.childrens)
-        curr_node = tree.nodes[i]
-        if curr_node.str_ending_idx == -1
-            curr_node.str_ending_idx = tree.leaf_idx
-        end
-        push!(save_data, tree.text[curr_node.str_start_idx:curr_node.str_ending_idx])
-        __get_edges_names__(tree, save_data, curr_node)
-    end
+    __get_edges_names__(tree, save_data, curr_node)
     return
 end
 
@@ -271,25 +269,29 @@ function __get_edges_names__(tree::SuffixTree, save_data::Vector{<:AbstractStrin
 end
 
 
-function longest_repeated_substring(tree::SuffixTree)
+"""
+Longest repeated substring is given to us by an inner node with a longest path from root to it (where length is summary edge lengths)
+If substring is repeated in a string it will be a prefix in at least two of the suffixes. Thereofe it will be an inner node of the suffix tree and cannot be an leaf node
+So we need to find a node, which have bigest sum of all edges on the path from root to this nod
+"""
+function longest_repeated_substring(tree::SuffixTree) # base function
     curr_node::Node = tree.nodes[tree.root]
     sbsr_lngth = zeros(Int, length(tree.nodes))
-    for child_id in values(curr_node.childrens)
-        child_node::Node = tree.nodes[child_id]
-        if child_node.is_leaf
-            sbsr_lngth[child_id] = -1
-        else
-            sbsr_lngth[child_id] = sbsr_lngth[curr_node.id] + (child_node.str_ending_idx - child_node.str_start_idx + 1)
-        end
-        __longest_repeated_substring__(tree, child_node, sbsr_lngth)
-    end
+    __longest_repeated_substring__(tree, curr_node, sbsr_lngth)
+
+    # find node which describe longest prefix of the suffix -> longest repeated substring
     longest_repeated_substring_node_id = argmax(sbsr_lngth)
     longest_node = tree.nodes[longest_repeated_substring_node_id]
+    # longest repeated substring is described by pat from root to found node.
+    # But we know the length of it and we knew ending of it from the longest_node, so we don't need to walk up to root
     return tree.text[longest_node.str_ending_idx - sbsr_lngth[longest_repeated_substring_node_id] + 1:longest_node.str_ending_idx]
 end
 
 
 function __longest_repeated_substring__(tree::SuffixTree, curr_node::Node, sbsr_lngth::Vector{Int})
+    # function for iterative dfs seach.
+    # needed only to hide curr_node and sbstr_lngth from user of library
+    # longest_common_substring is equivalent to __longest_repeated_substring__(tree, tree.nodes[tree.root], zeros(Int, length(tre.nodes))) and to finding string from length after that
     for child_id in values(curr_node.childrens)
         child_node::Node = tree.nodes[child_id]
         if child_node.is_leaf
