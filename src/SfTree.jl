@@ -276,7 +276,9 @@ So we need to find a node, which have bigest sum of all edges on the path from r
 """
 function longest_repeated_substring(tree::SuffixTree) # base function
     curr_node::Node = tree.nodes[tree.root]
+    # length of path(sum of edge lengths) from root to node for all nodes
     sbsr_lngth = zeros(Int, length(tree.nodes))
+    # fill sbsr_lngth using dfs
     __longest_repeated_substring__(tree, curr_node, sbsr_lngth)
 
     # find node which describe longest prefix of the suffix -> longest repeated substring
