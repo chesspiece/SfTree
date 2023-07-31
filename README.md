@@ -1,2 +1,2 @@
 # Suffix tree implementation.
-Construction is done with Ukonnen suffix tree
+Construction is done with Ukonnen's algorithm
