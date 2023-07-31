@@ -249,10 +249,11 @@ Get strings which attached to each edge of suffix tree by recursive DFS (depth f
 __get_edges_names__ is a helper function for get_edges_names needed for a recursion
 get_edges_names set initial parameters for a recursion
 """
-function get_edges_names(tree::SuffixTree, save_data::Vector{<:AbstractString})
+function get_edges_names(tree::SuffixTree)
     curr_node = tree.nodes[tree.root]
+    save_data = Vector{String}()
     __get_edges_names__(tree, save_data, curr_node)
-    return
+    return save_data
 end
 
 

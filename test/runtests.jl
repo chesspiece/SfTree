@@ -68,8 +68,7 @@ end
 @testset "Test that build tree have correct edges" begin
     text = "ATAAATG\$"
     tree = build_sf_tree(text)
-    tree_edges = Vector{String}()
-    get_edges_names(tree, tree_edges)
+    tree_edges = get_edges_names(tree)
     test_labels = ["AAATG\$", "G\$", "T", "ATG\$", "TG\$", "A", "A", "AAATG\$", "G\$", "T", "G\$", "\$"]
 
     for label in test_labels
